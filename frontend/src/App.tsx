@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import './App.css'
-
-// uso da fake API https://reqres.in/
 
 export interface IData {
   id: number
@@ -24,22 +23,11 @@ const getUser = async (id: number) => {
 
 function App() {
   const [currentUserId, setCurrentUserId] = useState(1)
-  const [user, setUser] = useState<IData>()
-  const [loading, setLoading] = useState(false)
-  const [isError, setIsError] = useState(false)
-
-  useEffect(() => {
-    setLoading(true)
-    getUser(currentUserId)
-      .then((res) => {
-        setUser(res)
-        setLoading(false)
-      })
-      .catch(() => {
-        setIsError(true)
-        setLoading(false)
-      })
-  }, [currentUserId])
+  const { data, isError, isLoading, isFetching } = useQuery(
+    ['users', currentUserId],
+    () => getUser(currentUserId),
+    { staleTime: 10 * 1000 }, // tempo para revalidar se os dados em cache estão atualizados
+  )
 
   if (isError) {
     return (
@@ -49,7 +37,7 @@ function App() {
     )
   }
 
-  if (!user || loading) {
+  if (!data || isLoading) {
     return (
       <section>
         <p>Loading ...</p>
@@ -59,11 +47,11 @@ function App() {
 
   return (
     <section>
-      <img src={user.avatar} alt="Profile Picture" />
+      <img src={data.avatar} alt="Profile Picture" />
       <p>
-        {user.first_name}, {user.last_name}
+        {data.first_name}, {data.last_name} ({data.id})
       </p>
-      <p>{user.email}</p>
+      <p>{data.email}</p>
 
       <div>
         <button onClick={() => setCurrentUserId((prev) => prev - 1)}>
@@ -73,8 +61,13 @@ function App() {
           Next
         </button>
       </div>
+
+      {isFetching && <small>We are revalidating your data...</small>}
     </section>
   )
 }
 
 export default App
+
+// fake API utilizada no projeto https://reqres.in/
+// docs React Query https://tanstack.com/query/v4/docs/react/quick-start
